@@ -1,7 +1,7 @@
 name: Style check
 
 on:
-  workflow_call:
+  workflow_dispatch:
 
 concurrency:
   group: style-${{ github.head_ref || github.run_id }}
@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         if: steps.changed-files.outputs.any_changed == 'true'
         run: uv sync --project engine --dev
-      
+
       - name: Run Ruff check
         if: steps.changed-files.outputs.any_changed == 'true'
         run: uv run --project engine --dev ruff format ./engine --check
@@ -67,23 +67,28 @@ jobs:
             .github/workflows/style.yml
 
       - name: Setup JDK Corretto 21 with Maven 3.8.4
-        if: steps.changed-files.outputs.any_changed == 'true'
-        uses: actions/setup-java@v3
+        if: always()
+        uses: actions/setup-java@v5
         with:
           distribution: 'corretto'
-          java-version: '21'
+          java-version: '${{ matrix.java }}'
           maven-version: '3.8.4'
 
       - name: Run Spotless check in robot-service
-        if: steps.changed-files.outputs.any_changed == 'true'
+        if: always()
         working-directory: backend/robot-service
         run: mvn -B -DskipTests -DskipITs spotless:check
 
       - name: Run Spotless check in resource-service
-        if: steps.changed-files.outputs.any_changed == 'true'
+        if: always()
         working-directory: backend/resource-service
         run: mvn -B -DskipTests -DskipITs spotless:check
 
+    strategy:
+      matrix:
+        java:
+          - 25
+      fail-fast: false
   web-style:
     name: Web Style
     runs-on: ubuntu-latest
@@ -126,5 +131,5 @@ jobs:
       - name: Web style check
         if: steps.changed-files.outputs.any_changed == 'true'
         working-directory: ./frontend
-        run: |
+        run: |-
           pnpm run lint:fix
